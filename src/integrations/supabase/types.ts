@@ -14,7 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      articles: {
+        Row: {
+          author_user_id: string
+          created_at: string
+          id: string
+          published_at: string
+          summary: string | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          author_user_id: string
+          created_at?: string
+          id?: string
+          published_at?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          author_user_id?: string
+          created_at?: string
+          id?: string
+          published_at?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      job_alerts: {
+        Row: {
+          active: boolean
+          cadence: string
+          created_at: string
+          id: string
+          keywords: string | null
+          location: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          cadence?: string
+          created_at?: string
+          id?: string
+          keywords?: string | null
+          location?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          cadence?: string
+          created_at?: string
+          id?: string
+          keywords?: string | null
+          location?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_jobs: {
+        Row: {
+          company: string | null
+          created_at: string
+          id: string
+          job_external_id: string
+          location: string | null
+          posted_at: string | null
+          remote: boolean | null
+          title: string
+          type: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          job_external_id: string
+          location?: string | null
+          posted_at?: string | null
+          remote?: boolean | null
+          title: string
+          type?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          id?: string
+          job_external_id?: string
+          location?: string | null
+          posted_at?: string | null
+          remote?: boolean | null
+          title?: string
+          type?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
