@@ -53,6 +53,14 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Brand & motion tokens */
+    --brand: 262 83% 58%;
+    --brand-2: 220 90% 56%;
+    --gradient-primary: linear-gradient(135deg, hsl(var(--brand)) 0%, hsl(var(--brand-2)) 100%);
+    --shadow-elegant: 0 12px 30px -12px hsl(var(--brand) / 0.35);
+    --shadow-glow: 0 10px 40px -10px hsl(var(--brand-2) / 0.45);
+    --transition-smooth: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .dark {
@@ -91,6 +99,14 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Brand tokens retained in dark for consistency */
+    --brand: 262 83% 58%;
+    --brand-2: 220 90% 56%;
+    --gradient-primary: linear-gradient(135deg, hsl(var(--brand)) 0%, hsl(var(--brand-2)) 100%);
+    --shadow-elegant: 0 12px 30px -12px hsl(var(--brand) / 0.45);
+    --shadow-glow: 0 10px 40px -10px hsl(var(--brand-2) / 0.6);
+    --transition-smooth: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
@@ -101,5 +117,20 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .hover\:shadow-glow:hover {
+    box-shadow: var(--shadow-glow);
+  }
+  .transition-smooth {
+    transition: var(--transition-smooth);
   }
 }
