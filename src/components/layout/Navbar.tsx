@@ -26,6 +26,9 @@ export const Navbar = () => {
           <Button asChild variant="outline">
             <a href="#contact">Contact</a>
           </Button>
+          <Button asChild variant="outline">
+            <Link to="/auth">Sign in</Link>
+          </Button>
           <Button asChild variant="hero">
             <Link to="/jobs">Browse Roles</Link>
           </Button>
