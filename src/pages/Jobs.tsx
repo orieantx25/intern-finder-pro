@@ -4,9 +4,30 @@ import JobsFilterBar, { FilterState } from "@/components/jobs/JobsFilterBar";
 import { jobs } from "@/data/jobs";
 import { Helmet } from "react-helmet-async";
 import { useMemo, useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+const isUS = (loc: string) => {
+  const l = loc.toLowerCase();
+  if (l.includes("united states") || l.includes(" usa ") || l.endsWith(", us")) return true;
+  // Heuristic: common US cities
+  const cities = ["san francisco", "new york", "austin", "seattle", "boston", "chicago", "los angeles", "san jose", "denver", "atlanta", "miami", "dallas"];
+  if (cities.some(c => l.includes(c))) return true;
+  // Avoid classifying Toronto, CA as US
+  if (l.includes("toronto") && l.endsWith(", ca")) return false;
+  // State abbreviation pattern
+  return /,\s?(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/.test(loc);
+};
+
+const isIndia = (loc: string) => {
+  const l = loc.toLowerCase();
+  if (l.includes("india")) return true;
+  const cities = ["bengaluru", "bangalore", "mumbai", "delhi", "hyderabad", "pune", "chennai", "noida", "gurgaon", "gurugram", "kolkata"];
+  return cities.some(c => l.includes(c));
+};
 
 const Jobs = () => {
   const [filters, setFilters] = useState<FilterState>({ q: "", type: "All", remoteOnly: false });
+  const [tab, setTab] = useState("all");
 
   const filtered: JobItem[] = useMemo(() => {
     return jobs.filter((j) => {
@@ -17,6 +38,9 @@ const Jobs = () => {
       return matchesQ && matchesType && matchesRemote;
     }).sort((a, b) => +new Date(b.postedAt) - +new Date(a.postedAt));
   }, [filters]);
+
+  const usJobs = useMemo(() => filtered.filter(j => isUS(j.location) || /\bUS\b|USA/i.test(j.location)), [filtered]);
+  const indiaJobs = useMemo(() => filtered.filter(j => isIndia(j.location)), [filtered]);
 
   const canonical = typeof window !== "undefined" ? window.location.origin + "/jobs" : "/jobs";
 
@@ -54,14 +78,47 @@ const Jobs = () => {
         <div className="mt-6">
           <JobsFilterBar onChange={setFilters} />
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {filtered.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-muted-foreground">No roles found. Try adjusting filters.</p>
-          )}
-        </div>
+
+        <Tabs value={tab} onValueChange={setTab} className="mt-6">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="us">US Jobs</TabsTrigger>
+            <TabsTrigger value="india">India Jobs</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {filtered.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+              {filtered.length === 0 && (
+                <p className="text-muted-foreground">No roles found. Try adjusting filters.</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="us" className="mt-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {usJobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+              {usJobs.length === 0 && (
+                <p className="text-muted-foreground">No US roles found.</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="india" className="mt-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {indiaJobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+              {indiaJobs.length === 0 && (
+                <p className="text-muted-foreground">No India roles found.</p>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </section>
     </Layout>
   );

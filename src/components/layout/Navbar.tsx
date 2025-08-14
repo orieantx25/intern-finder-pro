@@ -27,6 +27,9 @@ export const Navbar = () => {
             <a href="#contact">Contact</a>
           </Button>
           <Button asChild variant="outline">
+            <Link to="/submit-resume">Upload Resume</Link>
+          </Button>
+          <Button asChild variant="outline">
             <Link to="/auth">Sign in</Link>
           </Button>
           <Button asChild variant="hero">

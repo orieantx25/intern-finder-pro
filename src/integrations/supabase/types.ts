@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      applicants: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          linkedin_url: string | null
+          location: string | null
+          name: string
+          phone: string | null
+          portfolio_url: string | null
+          resume_path: string
+          skills: string | null
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          linkedin_url?: string | null
+          location?: string | null
+          name: string
+          phone?: string | null
+          portfolio_url?: string | null
+          resume_path: string
+          skills?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          linkedin_url?: string | null
+          location?: string | null
+          name?: string
+          phone?: string | null
+          portfolio_url?: string | null
+          resume_path?: string
+          skills?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           author_user_id: string
