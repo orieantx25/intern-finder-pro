@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import Layout from "@/components/layout/Layout";
@@ -24,6 +25,12 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: "",
+    college_name: "",
+    education_background: "",
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,6 +60,11 @@ const Profile = () => {
         return;
       } else {
         setProfile(profileData);
+        setEditForm({
+          full_name: profileData.full_name || "",
+          college_name: profileData.college_name || "",
+          education_background: profileData.education_background || "",
+        });
       }
       
       setLoading(false);
@@ -101,6 +113,56 @@ const Profile = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name,
+          college_name: editForm.college_name,
+          education_background: editForm.education_background,
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? {
+        ...prev,
+        full_name: editForm.full_name,
+        college_name: editForm.college_name,
+        education_background: editForm.education_background,
+      } : null);
+
+      setIsEditing(false);
+      toast({
+        title: "Profile updated successfully!",
+        description: "Your changes have been saved.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error updating profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (profile) {
+      setEditForm({
+        full_name: profile.full_name || "",
+        college_name: profile.college_name || "",
+        education_background: profile.education_background || "",
+      });
+    }
+    setIsEditing(false);
   };
 
   const handleSignOut = async () => {
@@ -155,36 +217,82 @@ const Profile = () => {
         </div>
 
         <div className="bg-card rounded-lg p-6 space-y-4">
-          <h2 className="text-xl font-semibold">Profile Information</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Profile Information</h2>
+            {!isEditing ? (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                Edit Profile
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleUpdateProfile} disabled={loading}>
+                  {loading ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
+          </div>
           
           <div className="grid gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-              <p className="mt-1">{profile.full_name}</p>
+              {isEditing ? (
+                <Input
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                  className="mt-1"
+                  placeholder="Your full name"
+                />
+              ) : (
+                <p className="mt-1">{profile.full_name}</p>
+              )}
             </div>
             
             <div>
               <label className="text-sm font-medium text-muted-foreground">College/University</label>
-              <p className="mt-1">{profile.college_name}</p>
+              {isEditing ? (
+                <Input
+                  value={editForm.college_name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, college_name: e.target.value }))}
+                  className="mt-1"
+                  placeholder="Your college or university"
+                />
+              ) : (
+                <p className="mt-1">{profile.college_name}</p>
+              )}
             </div>
             
             <div>
               <label className="text-sm font-medium text-muted-foreground">Education Background</label>
-              <p className="mt-1">{profile.education_background}</p>
+              {isEditing ? (
+                <Textarea
+                  value={editForm.education_background}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, education_background: e.target.value }))}
+                  className="mt-1"
+                  placeholder="Tell us about your educational background"
+                  rows={4}
+                />
+              ) : (
+                <p className="mt-1">{profile.education_background}</p>
+              )}
             </div>
           </div>
           
-          <div className="flex gap-4 pt-4">
-            <Button variant="outline" onClick={() => navigate("/submit-resume")}>
-              Upload Resume
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/jobs")}>
-              Browse Jobs
-            </Button>
-            <Button variant="destructive" onClick={handleSignOut}>
-              Sign Out
-            </Button>
-          </div>
+          {!isEditing && (
+            <div className="flex gap-4 pt-4">
+              <Button variant="outline" onClick={() => navigate("/submit-resume")}>
+                Upload Resume
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/jobs")}>
+                Browse Jobs
+              </Button>
+              <Button variant="destructive" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </div>
+          )}
         </div>
       </section>
     </Layout>
