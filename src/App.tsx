@@ -10,6 +10,8 @@ import Internships from "./pages/Internships";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import SubmitResume from "./pages/SubmitResume";
+import ProfileSetup from "./pages/ProfileSetup";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/internships" element={<Internships />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/submit-resume" element={<SubmitResume />} />
+            <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/profile" element={<Profile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

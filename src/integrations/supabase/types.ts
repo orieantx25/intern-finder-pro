@@ -128,6 +128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          college_name: string | null
+          created_at: string
+          education_background: string | null
+          full_name: string | null
+          id: string
+          profile_completed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          college_name?: string | null
+          created_at?: string
+          education_background?: string | null
+          full_name?: string | null
+          id?: string
+          profile_completed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          college_name?: string | null
+          created_at?: string
+          education_background?: string | null
+          full_name?: string | null
+          id?: string
+          profile_completed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_jobs: {
         Row: {
           company: string | null

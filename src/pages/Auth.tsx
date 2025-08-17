@@ -17,15 +17,37 @@ const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Redirect shortly after login
-        setTimeout(() => navigate("/", { replace: true }), 0);
+        // Check if user has completed profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('profile_completed')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (profile?.profile_completed) {
+          setTimeout(() => navigate("/profile", { replace: true }), 0);
+        } else {
+          setTimeout(() => navigate("/profile-setup", { replace: true }), 0);
+        }
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) navigate("/", { replace: true });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('profile_completed')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (profile?.profile_completed) {
+          navigate("/profile", { replace: true });
+        } else {
+          navigate("/profile-setup", { replace: true });
+        }
+      }
     });
 
     return () => { subscription.unsubscribe(); };
@@ -44,7 +66,7 @@ const Auth = () => {
 
   const signUp = async () => {
     setLoading(true);
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/profile-setup`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
