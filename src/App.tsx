@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import SubmitResume from "./pages/SubmitResume";
 import ProfileSetup from "./pages/ProfileSetup";
 import Profile from "./pages/Profile";
+import JobPortal from "./pages/JobPortal";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/internships" element={<Internships />} />
+            <Route path="/job-portal" element={<JobPortal />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/submit-resume" element={<SubmitResume />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />

@@ -39,6 +39,9 @@ export const Navbar = () => {
           <NavLink to="/internships" className={navLinkClasses}>
             Internships
           </NavLink>
+          <NavLink to="/job-portal" className={navLinkClasses}>
+            AI Portal
+          </NavLink>
           <a href="#insights" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Insights</a>
         </div>
         <div className="hidden md:flex items-center gap-2">

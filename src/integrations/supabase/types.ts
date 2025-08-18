@@ -128,6 +128,105 @@ export type Database = {
         }
         Relationships: []
       }
+      job_sources: {
+        Row: {
+          base_url: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          last_scraped_at: string | null
+          name: string
+          scrape_frequency_hours: number | null
+          updated_at: string
+        }
+        Insert: {
+          base_url: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_scraped_at?: string | null
+          name: string
+          scrape_frequency_hours?: number | null
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_scraped_at?: string | null
+          name?: string
+          scrape_frequency_hours?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          company: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          external_id: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          posted_at: string | null
+          remote: boolean | null
+          requirements: string | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          source: string
+          title: string
+          type: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          posted_at?: string | null
+          remote?: boolean | null
+          requirements?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          source: string
+          title: string
+          type?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          posted_at?: string | null
+          remote?: boolean | null
+          requirements?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          source?: string
+          title?: string
+          type?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -208,6 +307,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_applications: {
+        Row: {
+          application_date: string
+          applied_through: string | null
+          company_name: string | null
+          created_at: string
+          external_job_id: string | null
+          follow_up_date: string | null
+          id: string
+          interview_date: string | null
+          job_id: string | null
+          job_title: string | null
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_date?: string
+          applied_through?: string | null
+          company_name?: string | null
+          created_at?: string
+          external_job_id?: string | null
+          follow_up_date?: string | null
+          id?: string
+          interview_date?: string | null
+          job_id?: string | null
+          job_title?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_date?: string
+          applied_through?: string | null
+          company_name?: string | null
+          created_at?: string
+          external_job_id?: string | null
+          follow_up_date?: string | null
+          id?: string
+          interview_date?: string | null
+          job_id?: string | null
+          job_title?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
