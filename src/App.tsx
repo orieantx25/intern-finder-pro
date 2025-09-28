@@ -13,6 +13,7 @@ import SubmitResume from "./pages/SubmitResume";
 import ProfileSetup from "./pages/ProfileSetup";
 import Profile from "./pages/Profile";
 import JobPortal from "./pages/JobPortal";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/submit-resume" element={<SubmitResume />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

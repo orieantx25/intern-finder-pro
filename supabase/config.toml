@@ -1,1 +1,13 @@
 project_id = "flyqofieagfdvjjvcunv"
+
+[functions.firecrawl]
+verify_jwt = false
+
+[functions.job-crawler]
+verify_jwt = false
+
+[functions.job-crawler-trigger]
+verify_jwt = false
+
+[functions.job-scheduler]
+verify_jwt = false
