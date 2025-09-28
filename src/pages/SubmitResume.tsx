@@ -66,19 +66,18 @@ const SubmitResume = () => {
         .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || "application/pdf" });
       if (upErr) throw upErr;
 
-      const { error: insertErr } = await supabase.from("applicants").insert({
-        user_id: session.user.id,
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        location: values.location,
-        skills: values.skills,
-        linkedin_url: values.linkedin_url,
-        portfolio_url: values.portfolio_url,
-        summary: values.summary,
-        resume_path: upload?.path || path,
-      });
-      if (insertErr) throw insertErr;
+    const { data, error } = await supabase
+      .from('applicants')
+      .insert([
+        {
+          user_id: session.user.id,
+          full_name: values.name,
+          email: values.email,
+          phone: values.phone,
+          resume_url: upload?.path || path,
+        },
+      ]);
+      if (error) throw error;
 
       toast({ title: "Submitted", description: "Your details and resume were uploaded successfully." });
       reset();

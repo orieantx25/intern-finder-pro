@@ -222,18 +222,12 @@ export const JobRecommendations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
-        .from('saved_jobs')
-        .insert({
-          user_id: user.id,
-          job_external_id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          type: job.type,
-          remote: job.remote,
-          url: job.url
-        });
+    const { error } = await supabase
+      .from('saved_jobs')
+      .insert({
+        user_id: user.id,
+        job_id: job.id,
+      });
 
       if (error) throw error;
 

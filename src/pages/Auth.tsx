@@ -26,7 +26,7 @@ const Auth = () => {
           .eq('user_id', session.user.id)
           .single();
         
-        if (profile?.profile_completed) {
+        if (profile) {
           setTimeout(() => navigate("/profile", { replace: true }), 0);
         } else {
           setTimeout(() => navigate("/profile-setup", { replace: true }), 0);
@@ -42,7 +42,7 @@ const Auth = () => {
           .eq('user_id', session.user.id)
           .single();
         
-        if (profile?.profile_completed) {
+        if (profile) {
           navigate("/profile", { replace: true });
         } else {
           navigate("/profile-setup", { replace: true });

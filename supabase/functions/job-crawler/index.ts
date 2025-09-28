@@ -358,7 +358,7 @@ function extractJobsFromContent(content: string, sourceName: string, sourceUrl?:
     
     // Only add job if we have at least title and company
     if (job.title && job.company) {
-      jobs.push(job);
+      jobs.push(job as JobData);
     }
   }
   

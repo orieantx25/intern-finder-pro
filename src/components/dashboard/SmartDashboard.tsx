@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, Briefcase, Target, Calendar, Award, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
 
 interface DashboardStats {
   totalApplications: number;
@@ -59,41 +60,41 @@ export const SmartDashboard = () => {
       // Calculate statistics
       const totalApplications = applications.length;
       const activeApplications = applications.filter(app => 
-        ['applied', 'interview'].includes(app.status)
+        ['applied', 'interviewing'].includes(app.status)
       ).length;
       const interviewsScheduled = applications.filter(app => 
-        app.status === 'interview'
+        app.status === 'interviewing'
       ).length;
       const offerReceived = applications.filter(app => 
-        app.status === 'offer'
+        app.status === 'offered'
       ).length;
       const successfulApplications = applications.filter(app => 
-        ['offer', 'interview'].includes(app.status)
+        ['offered', 'interviewing'].includes(app.status)
       ).length;
       
       const applicationSuccessRate = totalApplications > 0 
         ? Math.round((successfulApplications / totalApplications) * 100)
         : 0;
 
-      // Top applied roles
-      const roleCount = applications.reduce((acc: any, app) => {
-        acc[app.job_title] = (acc[app.job_title] || 0) + 1;
-        return acc;
-      }, {});
-      const topAppliedRoles = Object.entries(roleCount)
-        .map(([role, count]) => ({ role, count: count as number }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+      // Calculate top roles - using job_id for now since we don't have job titles
+      const roleCount: Record<string, number> = {};
+      applications.forEach(app => {
+        roleCount[app.job_id] = (roleCount[app.job_id] || 0) + 1;
+      });
+      const topRoles = Object.entries(roleCount)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([role, count]) => ({ role, count }));
 
-      // Top companies
-      const companyCount = applications.reduce((acc: any, app) => {
-        acc[app.company_name] = (acc[app.company_name] || 0) + 1;
-        return acc;
-      }, {});
+      // Calculate top companies - using job_id for now since we don't have company names
+      const companyCount: Record<string, number> = {};
+      applications.forEach(app => {
+        companyCount[app.job_id] = (companyCount[app.job_id] || 0) + 1;
+      });
       const topCompanies = Object.entries(companyCount)
-        .map(([company, count]) => ({ company, count: count as number }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([company, count]) => ({ company, count }));
 
       // Applications by status
       const statusCount = applications.reduce((acc: any, app) => {
@@ -103,9 +104,9 @@ export const SmartDashboard = () => {
       const applicationsByStatus = Object.entries(statusCount)
         .map(([status, count]) => ({ status, count: count as number }));
 
-      // Recent activity (last 10 applications)
+      // Recent activity
       const recentActivity = applications
-        .sort((a, b) => new Date(b.application_date).getTime() - new Date(a.application_date).getTime())
+        .sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime())
         .slice(0, 10);
 
       setStats({
@@ -115,7 +116,7 @@ export const SmartDashboard = () => {
         offerReceived,
         savedJobs: savedJobs.length,
         applicationSuccessRate,
-        topAppliedRoles,
+        topAppliedRoles: topRoles,
         topCompanies,
         recentActivity,
         applicationsByStatus
@@ -131,8 +132,8 @@ export const SmartDashboard = () => {
   const getStatusColor = (status: string) => {
     const colors = {
       applied: 'bg-blue-500',
-      interview: 'bg-yellow-500',
-      offer: 'bg-green-500',
+      interviewing: 'bg-yellow-500',
+      offered: 'bg-green-500',
       rejected: 'bg-red-500',
       withdrawn: 'bg-gray-500'
     };
@@ -223,7 +224,7 @@ export const SmartDashboard = () => {
         {/* Top Applied Roles */}
         <Card>
           <CardHeader>
-            <CardTitle>Most Applied Roles</CardTitle>
+            <CardTitle>Most Applied Job IDs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -244,7 +245,7 @@ export const SmartDashboard = () => {
         {/* Top Companies */}
         <Card>
           <CardHeader>
-            <CardTitle>Top Companies Applied</CardTitle>
+            <CardTitle>Top Job IDs Applied</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -271,15 +272,19 @@ export const SmartDashboard = () => {
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {stats.recentActivity.length > 0 ? (
                 stats.recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-2 border rounded-md">
-                    <div className={`w-2 h-2 rounded-full ${getStatusColor(activity.status)}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{activity.job_title}</p>
-                      <p className="text-xs text-muted-foreground">{activity.company_name}</p>
+                  <div key={activity.id} className="flex justify-between items-center py-2">
+                    <div>
+                      <p className="font-medium">Job Application</p>
+                      <p className="text-sm text-muted-foreground">Job ID: {activity.job_id}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(activity.application_date).toLocaleDateString()}
-                    </p>
+                    <div className="text-right">
+                      <div className={`inline-block px-2 py-1 rounded text-xs ${getStatusColor(activity.status)}`}>
+                        {activity.status}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(activity.applied_at), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
                 ))
               ) : (

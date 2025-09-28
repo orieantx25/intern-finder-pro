@@ -39,7 +39,7 @@ const JobCard = ({ job }: JobCardProps) => {
       const { data, error } = await supabase
         .from('saved_jobs')
         .select('id')
-        .eq('job_external_id', job.id)
+        .eq('job_id', job.id)
         .maybeSingle();
       if (error && (error as any).code !== 'PGRST116') {
         console.error('Error loading saved state', error);
@@ -70,14 +70,7 @@ const JobCard = ({ job }: JobCardProps) => {
           .from('saved_jobs')
           .insert({
             user_id: session.user.id,
-            job_external_id: job.id,
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            type: job.type,
-            remote: job.remote,
-            url: job.url,
-            posted_at: new Date(job.postedAt).toISOString(),
+            job_id: job.id,
           })
           .select('id')
           .maybeSingle();
