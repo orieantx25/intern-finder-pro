@@ -30,7 +30,7 @@ export const Navbar = () => {
     <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
       <nav className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-semibold">
-          <span className="text-lg">CareerConnect</span>
+          <span className="text-lg">Qrate</span>
         </Link>
         <div className="hidden md:flex items-center gap-1">
           <NavLink to="/jobs" className={navLinkClasses}>

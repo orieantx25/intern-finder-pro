@@ -85,8 +85,8 @@ const Auth = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Sign in or Create account – CareerConnect</title>
-        <meta name="description" content="Sign in or create your CareerConnect account to save jobs and set up alerts." />
+        <title>Sign in or Create account – Qrate</title>
+        <meta name="description" content="Sign in or create your Qrate account to save jobs and set up personalized job alerts." />
         <link rel="canonical" href={canonical} />
       </Helmet>
       <section className="container py-12 md:py-16 max-w-md">

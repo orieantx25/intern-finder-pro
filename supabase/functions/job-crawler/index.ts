@@ -10,12 +10,15 @@ interface JobData {
   description?: string;
   url?: string;
   salary?: string;
+  type?: string;
+  remote?: boolean;
 }
 
 interface CrawlResult {
   success: boolean;
   data?: any;
   error?: string;
+  status?: number;
 }
 
 interface JobSource {
@@ -25,6 +28,14 @@ interface JobSource {
   is_active: boolean;
 }
 
+interface CrawlStats {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  jobsExtracted: number;
+  duplicatesSkipped: number;
+}
+
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -32,7 +43,56 @@ const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Rate limiting and politeness controls
+const RATE_LIMIT_MS = 2000; // 2 seconds between requests
+const MAX_RETRIES = 3;
+const REQUEST_TIMEOUT = 30000; // 30 seconds
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// User agents for respectful crawling
+const USER_AGENTS = [
+  'Mozilla/5.0 (compatible; QrateBot/1.0; +https://qrate.dev/bot)',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+];
+
+// Job portal specific selectors and patterns
+const JOB_PATTERNS = {
+  naukri: {
+    selectors: {
+      jobTitle: '.jobTuple-heading a, .title',
+      company: '.companyInfo .company, .company-name',
+      location: '.locationsContainer .location, .job-location', 
+      experience: '.expwdth, .experience',
+      skills: '.skillList .chip, .skills',
+      salary: '.salary, .package',
+      description: '.jobDescription, .job-desc'
+    },
+    baseUrl: 'https://www.naukri.com'
+  },
+  indeed: {
+    selectors: {
+      jobTitle: '[data-jk] h2 a span, .jobTitle a',
+      company: '.companyName, [data-testid="company-name"]',
+      location: '.companyLocation, [data-testid="job-location"]',
+      experience: '.metadata, .job-snippet',
+      salary: '.salary-snippet, .salary',
+      description: '.job-snippet, .summary'
+    },
+    baseUrl: 'https://indeed.co.in'
+  },
+  linkedin: {
+    selectors: {
+      jobTitle: '.base-search-card__title, .job-details-jobs-unified-top-card__job-title',
+      company: '.base-search-card__subtitle, .job-details-jobs-unified-top-card__company-name',
+      location: '.job-search-card__location, .job-details-jobs-unified-top-card__bullet',
+      experience: '.job-details-preferences-and-skills, .job-criteria',
+      skills: '.job-details-preferences-and-skills__list-item',
+      description: '.job-details-description-content__text'
+    },
+    baseUrl: 'https://www.linkedin.com'
+  }
+};
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -41,7 +101,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('🚀 Job crawler started');
+    console.log('🚀 Qrate Job Crawler started');
+    const startTime = Date.now();
     
     // Get active job sources from database
     const { data: jobSources, error: sourcesError } = await supabase
@@ -50,7 +111,7 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     if (sourcesError) {
-      console.error('Error fetching job sources:', sourcesError);
+      console.error('❌ Error fetching job sources:', sourcesError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to fetch job sources' }),
         { 
@@ -62,6 +123,13 @@ Deno.serve(async (req) => {
 
     const results = [];
     let totalJobsFound = 0;
+    let totalStats: CrawlStats = {
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      jobsExtracted: 0,
+      duplicatesSkipped: 0
+    };
 
     // Process each job source
     for (const source of jobSources as JobSource[]) {
@@ -70,8 +138,8 @@ Deno.serve(async (req) => {
       try {
         const crawlResult = await crawlJobSource(source);
         
-        if (crawlResult.success && 'data' in crawlResult && crawlResult.data) {
-          const jobs = await parseJobsFromSource(
+        if (crawlResult.success && crawlResult.data) {
+          const { jobs, stats } = await parseJobsFromSource(
             crawlResult.data,
             source.name
           );
@@ -79,10 +147,18 @@ Deno.serve(async (req) => {
           const savedJobs = await saveJobsToDatabase(jobs);
           totalJobsFound += savedJobs;
           
+          // Update stats
+          totalStats.totalRequests += stats.totalRequests;
+          totalStats.successfulRequests += stats.successfulRequests;
+          totalStats.failedRequests += stats.failedRequests;
+          totalStats.jobsExtracted += stats.jobsExtracted;
+          totalStats.duplicatesSkipped += stats.duplicatesSkipped;
+          
           results.push({
             source: source.name,
             jobsFound: savedJobs,
-            success: true
+            success: true,
+            stats: stats
           });
 
           // Update last crawled timestamp
@@ -90,21 +166,26 @@ Deno.serve(async (req) => {
             .from('job_sources')
             .update({ last_crawled_at: new Date().toISOString() })
             .eq('id', source.id);
+            
+          console.log(`✅ ${source.name}: Found ${savedJobs} new jobs`);
         } else {
+          totalStats.failedRequests++;
           results.push({
             source: source.name,
             jobsFound: 0,
             success: false,
             error: crawlResult.error
           });
+          console.log(`❌ ${source.name}: ${crawlResult.error}`);
         }
 
-        // Rate limiting - wait 2 seconds between sources
-        await delay(2000);
+        // Rate limiting - respect robots.txt
+        await delay(RATE_LIMIT_MS);
         
       } catch (error) {
         const errorMsg = `Error processing ${source.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        console.error(errorMsg);
+        console.error(`❌ ${errorMsg}`);
+        totalStats.failedRequests++;
         
         results.push({
           source: source.name,
@@ -116,15 +197,20 @@ Deno.serve(async (req) => {
     }
 
     // Cleanup expired jobs
-    await cleanupExpiredJobs();
-
-    console.log(`✅ Job crawler completed. Total jobs found: ${totalJobsFound}`);
+    const cleanupCount = await cleanupExpiredJobs();
+    
+    const executionTime = Date.now() - startTime;
+    console.log(`✅ Qrate Job Crawler completed in ${executionTime}ms`);
+    console.log(`📊 Stats: ${totalJobsFound} new jobs, ${cleanupCount} expired jobs cleaned`);
 
     return new Response(
       JSON.stringify({
         success: true,
         totalJobsFound,
         results,
+        stats: totalStats,
+        executionTimeMs: executionTime,
+        cleanupCount,
         message: `Successfully processed ${jobSources.length} job sources`
       }),
       {
@@ -134,7 +220,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Job crawler error:', error);
+    console.error('❌ Job crawler error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -150,15 +236,194 @@ Deno.serve(async (req) => {
 
 async function crawlJobSource(source: JobSource): Promise<CrawlResult> {
   try {
-    console.log(`🕷️ Using sample data for ${source.name} - ${source.base_url}`);
+    console.log(`🕷️ Crawling ${source.name} - ${source.base_url}`);
 
-    // Since we're using Firecrawl via existing function, let's generate sample job data
-    const sampleJobs = generateSampleJobs(source.name);
-    
-    return { success: true, data: sampleJobs };
+    // Check robots.txt first
+    const robotsAllowed = await checkRobotsTxt(source.base_url);
+    if (!robotsAllowed) {
+      console.log(`🚫 Robots.txt disallows crawling for ${source.name}`);
+      return { success: false, error: 'Robots.txt disallows crawling' };
+    }
+
+    // Use Firecrawl for real crawling when API key is available
+    if (firecrawlApiKey && firecrawlApiKey !== 'your-api-key-here') {
+      return await crawlWithFirecrawl(source);
+    } else {
+      // Fallback to direct HTTP crawling with proper error handling
+      return await crawlWithDirectHttp(source);
+    }
     
   } catch (error) {
+    console.error(`❌ Error crawling ${source.name}:`, error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+async function checkRobotsTxt(baseUrl: string): Promise<boolean> {
+  try {
+    const robotsUrl = new URL('/robots.txt', baseUrl).toString();
+    const response = await fetch(robotsUrl, {
+      headers: {
+        'User-Agent': USER_AGENTS[0]
+      }
+    });
+    
+    if (!response.ok) return true; // If no robots.txt, assume allowed
+    
+    const robotsText = await response.text();
+    const lines = robotsText.split('\n');
+    let isOurUserAgent = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim().toLowerCase();
+      if (trimmed.startsWith('user-agent:')) {
+        isOurUserAgent = trimmed.includes('*') || trimmed.includes('qratebot');
+      } else if (isOurUserAgent && trimmed.startsWith('disallow:')) {
+        const disallowPath = trimmed.replace('disallow:', '').trim();
+        if (disallowPath === '/' || disallowPath === '') {
+          return false; // Disallowed
+        }
+      }
+    }
+    
+    return true; // Allowed by default
+  } catch (error) {
+    console.log(`⚠️ Could not check robots.txt for ${baseUrl}, assuming allowed`);
+    return true;
+  }
+}
+
+async function crawlWithFirecrawl(source: JobSource): Promise<CrawlResult> {
+  try {
+    const crawlUrls = generateCrawlUrls(source);
+    const allData = [];
+    
+    for (const url of crawlUrls) {
+      console.log(`🔗 Crawling URL: ${url}`);
+      
+      const response = await fetch('https://api.firecrawl.dev/v0/scrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${firecrawlApiKey}`
+        },
+        body: JSON.stringify({
+          url: url,
+          formats: ['markdown', 'html'],
+          timeout: REQUEST_TIMEOUT
+        })
+      });
+      
+      if (!response.ok) {
+        console.error(`❌ Firecrawl error for ${url}:`, response.status);
+        continue;
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        allData.push({
+          url: url,
+          markdown: data.data.markdown,
+          html: data.data.html,
+          content: data.data.content
+        });
+      }
+      
+      await delay(RATE_LIMIT_MS);
+    }
+    
+    return { success: true, data: allData };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Firecrawl error' };
+  }
+}
+
+async function crawlWithDirectHttp(source: JobSource): Promise<CrawlResult> {
+  try {
+    const crawlUrls = generateCrawlUrls(source);
+    const allData = [];
+    
+    for (const url of crawlUrls) {
+      console.log(`🔗 Direct crawling URL: ${url}`);
+      
+      let retries = 0;
+      while (retries < MAX_RETRIES) {
+        try {
+          const response = await fetch(url, {
+            headers: {
+              'User-Agent': USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.5',
+              'Accept-Encoding': 'gzip, deflate',
+              'Connection': 'keep-alive',
+              'Upgrade-Insecure-Requests': '1'
+            },
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const html = await response.text();
+          allData.push({
+            url: url,
+            html: html,
+            content: html
+          });
+          
+          break; // Success, exit retry loop
+          
+        } catch (error) {
+          retries++;
+          console.log(`⚠️ Retry ${retries}/${MAX_RETRIES} for ${url}: ${error}`);
+          if (retries >= MAX_RETRIES) {
+            console.error(`❌ Failed to crawl ${url} after ${MAX_RETRIES} retries`);
+          } else {
+            await delay(RATE_LIMIT_MS * retries); // Exponential backoff
+          }
+        }
+      }
+      
+      await delay(RATE_LIMIT_MS);
+    }
+    
+    return { success: true, data: allData };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Direct crawling error' };
+  }
+}
+
+function generateCrawlUrls(source: JobSource): string[] {
+  const sourceName = source.name.toLowerCase();
+  const baseUrl = source.base_url;
+  
+  // Generate specific URLs based on the job portal
+  switch (sourceName) {
+    case 'naukri':
+      return [
+        `${baseUrl}/jobs?k=software%20engineer&l=bangalore`,
+        `${baseUrl}/jobs?k=data%20scientist&l=mumbai`,
+        `${baseUrl}/jobs?k=product%20manager&l=delhi`,
+        `${baseUrl}/jobs?k=frontend%20developer&l=pune`,
+        `${baseUrl}/jobs?k=backend%20developer&l=hyderabad`
+      ];
+    case 'indeed':
+      return [
+        `${baseUrl}/jobs?q=software+engineer&l=Bangalore`,
+        `${baseUrl}/jobs?q=data+scientist&l=Mumbai`,
+        `${baseUrl}/jobs?q=product+manager&l=Delhi`,
+        `${baseUrl}/jobs?q=frontend+developer&l=Pune`,
+        `${baseUrl}/jobs?q=backend+developer&l=Hyderabad`
+      ];
+    case 'linkedin':
+      return [
+        `${baseUrl}/jobs/search/?keywords=software%20engineer&location=India`,
+        `${baseUrl}/jobs/search/?keywords=data%20scientist&location=India`,
+        `${baseUrl}/jobs/search/?keywords=product%20manager&location=India`
+      ];
+    default:
+      return [baseUrl];
   }
 }
 
@@ -235,18 +500,51 @@ We are looking for a talented ${randomTitle} to join our team. This is an excell
   return jobs;
 }
 
-async function parseJobsFromSource(crawlData: any[], sourceName: string): Promise<JobData[]> {
+async function parseJobsFromSource(crawlData: any[], sourceName: string): Promise<{jobs: JobData[], stats: CrawlStats}> {
   const jobs: JobData[] = [];
+  const stats: CrawlStats = {
+    totalRequests: crawlData.length,
+    successfulRequests: 0,
+    failedRequests: 0,
+    jobsExtracted: 0,
+    duplicatesSkipped: 0
+  };
   
   for (const page of crawlData) {
-    if (!page.markdown && !page.content) continue;
-    
-    const content = page.markdown || page.content || '';
-    const extractedJobs = extractJobsFromContent(content, sourceName, page.url);
-    jobs.push(...extractedJobs);
+    try {
+      if (!page.html && !page.markdown && !page.content) {
+        stats.failedRequests++;
+        continue;
+      }
+      
+      stats.successfulRequests++;
+      const content = page.html || page.markdown || page.content || '';
+      
+      let extractedJobs: JobData[] = [];
+      
+      // Use specific parsers based on source
+      if (sourceName.toLowerCase().includes('naukri')) {
+        extractedJobs = parseNaukriJobs(content, page.url);
+      } else if (sourceName.toLowerCase().includes('indeed')) {
+        extractedJobs = parseIndeedJobs(content, page.url);
+      } else if (sourceName.toLowerCase().includes('linkedin')) {
+        extractedJobs = parseLinkedInJobs(content, page.url);
+      } else {
+        // Generic parser
+        extractedJobs = extractJobsFromContent(content, sourceName, page.url);
+      }
+      
+      jobs.push(...extractedJobs);
+      stats.jobsExtracted += extractedJobs.length;
+      
+    } catch (error) {
+      console.error(`❌ Error parsing page from ${sourceName}:`, error);
+      stats.failedRequests++;
+    }
   }
   
-  return jobs;
+  console.log(`📊 ${sourceName} parsing stats:`, stats);
+  return { jobs, stats };
 }
 
 function extractJobsFromContent(content: string, sourceName: string, sourceUrl?: string): JobData[] {
@@ -421,21 +719,169 @@ async function saveJobsToDatabase(jobs: JobData[]): Promise<number> {
   return savedCount;
 }
 
-async function cleanupExpiredJobs(): Promise<void> {
+async function cleanupExpiredJobs(): Promise<number> {
   try {
     // Mark jobs as inactive if they're older than 30 days
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('jobs')
       .update({ is_active: false })
       .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .select('id');
 
     if (error) {
-      console.error('Error cleaning up expired jobs:', error);
-    } else {
-      console.log('✅ Expired jobs cleanup completed');
+      console.error('❌ Error cleaning up expired jobs:', error);
+      return 0;
+    }
+    
+    const count = data?.length || 0;
+    console.log(`🧹 Cleaned up ${count} expired jobs`);
+    return count;
+  } catch (error) {
+    console.error('❌ Error in cleanup function:', error);
+    return 0;
+  }
+}
+
+// Specialized parsers for different job portals
+function parseNaukriJobs(html: string, sourceUrl?: string): JobData[] {
+  const jobs: JobData[] = [];
+  
+  try {
+    // Extract jobs using regex patterns for Naukri.com structure
+    const jobBlocks = html.match(/<article[^>]*class="[^"]*jobTuple[^"]*"[^>]*>.*?<\/article>/gs) || [];
+    
+    for (const block of jobBlocks) {
+      const job: Partial<JobData> = {};
+      
+      // Extract title
+      const titleMatch = block.match(/<a[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)</i);
+      if (titleMatch) job.title = cleanText(titleMatch[1]);
+      
+      // Extract company
+      const companyMatch = block.match(/<a[^>]*class="[^"]*companyName[^"]*"[^>]*>([^<]+)</i);
+      if (companyMatch) job.company = cleanText(companyMatch[1]);
+      
+      // Extract location
+      const locationMatch = block.match(/<span[^>]*class="[^"]*locationsContainer[^"]*"[^>]*>([^<]+)</i);
+      if (locationMatch) job.location = cleanText(locationMatch[1]);
+      
+      // Extract experience
+      const expMatch = block.match(/<span[^>]*class="[^"]*expwdth[^"]*"[^>]*>([^<]+)</i);
+      if (expMatch) job.experience = cleanText(expMatch[1]);
+      
+      // Extract salary
+      const salaryMatch = block.match(/<span[^>]*class="[^"]*sal[^"]*"[^>]*>([^<]+)</i);
+      if (salaryMatch) job.salary = cleanText(salaryMatch[1]);
+      
+      // Extract skills
+      const skillsMatches = block.match(/<span[^>]*class="[^"]*chip[^"]*"[^>]*>([^<]+)</gi);
+      if (skillsMatches) {
+        job.skills = skillsMatches.map(match => {
+          const skillMatch = match.match(/>([^<]+)</);
+          return skillMatch ? cleanText(skillMatch[1]) : '';
+        }).filter(Boolean);
+      }
+      
+      job.url = sourceUrl;
+      job.description = extractTextContent(block).substring(0, 500);
+      
+      if (job.title && job.company) {
+        job.type = 'full-time';
+        job.remote = job.location?.toLowerCase().includes('remote') || false;
+        jobs.push(job as JobData);
+      }
     }
   } catch (error) {
-    console.error('Error in cleanup function:', error);
+    console.error('❌ Error parsing Naukri jobs:', error);
   }
+  
+  return jobs;
+}
+
+function parseIndeedJobs(html: string, sourceUrl?: string): JobData[] {
+  const jobs: JobData[] = [];
+  
+  try {
+    // Extract jobs using Indeed's structure
+    const jobBlocks = html.match(/<div[^>]*data-jk="[^"]*"[^>]*>.*?(?=<div[^>]*data-jk=|$)/gs) || [];
+    
+    for (const block of jobBlocks) {
+      const job: Partial<JobData> = {};
+      
+      // Extract title
+      const titleMatch = block.match(/<h2[^>]*class="[^"]*jobTitle[^"]*"[^>]*>.*?<span[^>]*>([^<]+)</i);
+      if (titleMatch) job.title = cleanText(titleMatch[1]);
+      
+      // Extract company
+      const companyMatch = block.match(/<span[^>]*class="[^"]*companyName[^"]*"[^>]*>([^<]+)</i);
+      if (companyMatch) job.company = cleanText(companyMatch[1]);
+      
+      // Extract location
+      const locationMatch = block.match(/<div[^>]*class="[^"]*companyLocation[^"]*"[^>]*>([^<]+)</i);
+      if (locationMatch) job.location = cleanText(locationMatch[1]);
+      
+      // Extract salary
+      const salaryMatch = block.match(/<span[^>]*class="[^"]*salary-snippet[^"]*"[^>]*>([^<]+)</i);
+      if (salaryMatch) job.salary = cleanText(salaryMatch[1]);
+      
+      job.url = sourceUrl;
+      job.description = extractTextContent(block).substring(0, 500);
+      
+      if (job.title && job.company) {
+        job.type = 'full-time';
+        job.remote = job.location?.toLowerCase().includes('remote') || false;
+        jobs.push(job as JobData);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error parsing Indeed jobs:', error);
+  }
+  
+  return jobs;
+}
+
+function parseLinkedInJobs(html: string, sourceUrl?: string): JobData[] {
+  const jobs: JobData[] = [];
+  
+  try {
+    // Extract jobs using LinkedIn's structure
+    const jobBlocks = html.match(/<li[^>]*class="[^"]*jobs-search-result[^"]*"[^>]*>.*?<\/li>/gs) || [];
+    
+    for (const block of jobBlocks) {
+      const job: Partial<JobData> = {};
+      
+      // Extract title
+      const titleMatch = block.match(/<h3[^>]*class="[^"]*base-search-card__title[^"]*"[^>]*>.*?<a[^>]*>([^<]+)</i);
+      if (titleMatch) job.title = cleanText(titleMatch[1]);
+      
+      // Extract company
+      const companyMatch = block.match(/<h4[^>]*class="[^"]*base-search-card__subtitle[^"]*"[^>]*>.*?<a[^>]*>([^<]+)</i);
+      if (companyMatch) job.company = cleanText(companyMatch[1]);
+      
+      // Extract location
+      const locationMatch = block.match(/<span[^>]*class="[^"]*job-search-card__location[^"]*"[^>]*>([^<]+)</i);
+      if (locationMatch) job.location = cleanText(locationMatch[1]);
+      
+      job.url = sourceUrl;
+      job.description = extractTextContent(block).substring(0, 500);
+      
+      if (job.title && job.company) {
+        job.type = 'full-time';
+        job.remote = job.location?.toLowerCase().includes('remote') || false;
+        jobs.push(job as JobData);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error parsing LinkedIn jobs:', error);
+  }
+  
+  return jobs;
+}
+
+function extractTextContent(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

@@ -4,8 +4,8 @@ const Footer = () => {
     <footer className="border-t mt-16">
       <div className="container py-10 grid gap-6 md:grid-cols-3 text-sm">
         <div className="space-y-2">
-          <p className="font-semibold">CareerConnect</p>
-          <p className="text-muted-foreground">Curated jobs and internships from official company sources.</p>
+          <p className="font-semibold">Qrate</p>
+          <p className="text-muted-foreground">AI-powered job discovery platform sourcing opportunities from official company channels and major Indian job portals.</p>
         </div>
         <div className="space-y-1">
           <p className="font-semibold">Explore</p>
@@ -25,7 +25,7 @@ const Footer = () => {
       </div>
       <div className="border-t">
         <div className="container py-6 text-xs text-muted-foreground flex justify-between">
-          <p>© {year} CareerConnect. All rights reserved.</p>
+          <p>© {year} Qrate. All rights reserved.</p>
           <p>Built with love.</p>
         </div>
       </div>

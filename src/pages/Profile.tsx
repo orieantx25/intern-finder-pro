@@ -185,8 +185,8 @@ const Profile = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Your Profile – CareerConnect</title>
-        <meta name="description" content="Manage your CareerConnect profile and preferences." />
+        <title>Your Profile – Qrate</title>
+        <meta name="description" content="Manage your Qrate profile, job preferences, and AI-powered job recommendations." />
       </Helmet>
       <section className="container py-12 md:py-16 max-w-2xl">
         <div className="text-center mb-8">

@@ -67,8 +67,8 @@ const Jobs = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Jobs – CareerConnect</title>
-        <meta name="description" content="Browse curated job openings from official company websites and social channels. Apply directly at the company site." />
+        <title>Jobs – Qrate</title>
+        <meta name="description" content="Browse AI-curated job openings from official company websites and major Indian job portals. Direct application links and smart job matching." />
         <link rel="canonical" href={canonical} />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>

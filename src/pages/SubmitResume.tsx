@@ -95,8 +95,8 @@ const SubmitResume = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Upload Resume – CareerConnect</title>
-        <meta name="description" content="Job seekers can upload their resume and details to get discovered by companies." />
+        <title>Upload Resume – Qrate</title>
+        <meta name="description" content="Upload your resume to Qrate's AI-powered platform and get discovered by top companies. Smart matching technology connects you with relevant opportunities." />
         <link rel="canonical" href={canonical} />
       </Helmet>
       <main className="container py-10">

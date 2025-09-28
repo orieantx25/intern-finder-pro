@@ -9,7 +9,7 @@ const Index = () => {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'CareerConnect – Jobs and Internships',
+    name: 'Qrate – AI-Powered Job Discovery Platform',
     url: canonical,
     potentialAction: {
       '@type': 'SearchAction',
@@ -21,8 +21,8 @@ const Index = () => {
   return (
     <Layout>
       <Helmet>
-        <title>CareerConnect – Jobs and Internships Portal</title>
-        <meta name="description" content="Discover curated jobs and internships posted on official company sites and social channels. Apply directly at the source." />
+        <title>Qrate – AI-Powered Job Discovery Platform</title>
+        <meta name="description" content="Discover curated jobs and internships from official company websites and major Indian job portals. AI-powered matching and automated job discovery." />
         <link rel="canonical" href={canonical} />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>

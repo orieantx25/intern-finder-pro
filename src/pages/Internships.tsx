@@ -43,8 +43,8 @@ const Internships = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Internships – CareerConnect</title>
-        <meta name="description" content="Explore internships sourced from official company websites and social posts. Apply directly to the company." />
+        <title>Internships – Qrate</title>
+        <meta name="description" content="Explore internships sourced from official company websites and major job portals. AI-curated opportunities with direct application links." />
         <link rel="canonical" href={canonical} />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>

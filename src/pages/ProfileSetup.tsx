@@ -40,7 +40,7 @@ const ProfileSetup = () => {
 
       toast({
         title: "Profile created successfully!",
-        description: "Welcome to CareerConnect",
+        description: "Welcome to Qrate - your AI-powered job discovery platform",
       });
 
       navigate("/profile", { replace: true });
@@ -62,8 +62,8 @@ const ProfileSetup = () => {
   return (
     <Layout>
       <Helmet>
-        <title>Complete Your Profile – CareerConnect</title>
-        <meta name="description" content="Complete your profile to get started with CareerConnect." />
+        <title>Complete Your Profile – Qrate</title>
+        <meta name="description" content="Complete your profile to get personalized job recommendations with Qrate's AI-powered platform." />
       </Helmet>
       <section className="container py-12 md:py-16 max-w-md">
         <h1 className="text-3xl font-bold">Complete Your Profile</h1>
