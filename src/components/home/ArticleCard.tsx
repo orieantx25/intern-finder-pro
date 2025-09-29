@@ -8,9 +8,19 @@ interface ArticleCardProps {
 }
 
 const ArticleCard = ({ title, summary, date, url }: ArticleCardProps) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Read article: ${title}`}>
-      <Card className="h-full transition-all hover:shadow-glow">
+    <a 
+      href={url} 
+      onClick={handleClick}
+      className="block"
+      aria-label={`Read article: ${title}`}
+    >
+      <Card className="h-full transition-all hover:shadow-glow cursor-pointer">
         <CardHeader>
           <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>

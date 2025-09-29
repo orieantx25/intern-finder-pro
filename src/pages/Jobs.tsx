@@ -1,10 +1,11 @@
 import Layout from "@/components/layout/Layout";
 import JobCard, { JobItem } from "@/components/jobs/JobCard";
 import JobsFilterBar, { FilterState } from "@/components/jobs/JobsFilterBar";
-import { jobs } from "@/data/jobs";
 import { Helmet } from "react-helmet-async";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const isUS = (loc: string) => {
   const l = loc.toLowerCase();
@@ -28,6 +29,53 @@ const isIndia = (loc: string) => {
 const Jobs = () => {
   const [filters, setFilters] = useState<FilterState>({ q: "", type: "All", remoteOnly: false });
   const [tab, setTab] = useState("all");
+  const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('is_active', true)
+          .order('posted_at', { ascending: false });
+
+        if (error) throw error;
+
+        const mappedJobs: JobItem[] = (data || []).map(job => {
+          const validTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+          const jobType = validTypes.includes(job.type || '') ? job.type as JobItem['type'] : 'Full-time';
+          
+          return {
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location || 'Remote',
+            type: jobType,
+            remote: job.remote || false,
+            url: job.url || '#',
+            postedAt: job.posted_at || new Date().toISOString(),
+            description: job.description || undefined,
+          };
+        });
+
+        setJobs(mappedJobs);
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        toast({
+          title: "Error loading jobs",
+          description: "Failed to fetch jobs from database",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [toast]);
 
   const filtered: JobItem[] = useMemo(() => {
     return jobs.filter((j) => {
@@ -37,7 +85,7 @@ const Jobs = () => {
       const matchesRemote = !filters.remoteOnly || j.remote;
       return matchesQ && matchesType && matchesRemote;
     }).sort((a, b) => +new Date(b.postedAt) - +new Date(a.postedAt));
-  }, [filters]);
+  }, [filters, jobs]);
 
   const usJobs = useMemo(() => filtered.filter(j => isUS(j.location) || /\bUS\b|USA/i.test(j.location)), [filtered]);
   const indiaJobs = useMemo(() => filtered.filter(j => isIndia(j.location)), [filtered]);
@@ -87,36 +135,48 @@ const Jobs = () => {
           </TabsList>
 
           <TabsContent value="all" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {filtered.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-              {filtered.length === 0 && (
-                <p className="text-muted-foreground">No roles found. Try adjusting filters.</p>
-              )}
-            </div>
+            {loading ? (
+              <p className="text-muted-foreground">Loading jobs...</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {filtered.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+                {filtered.length === 0 && (
+                  <p className="text-muted-foreground">No roles found. Try adjusting filters.</p>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="us" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {usJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-              {usJobs.length === 0 && (
-                <p className="text-muted-foreground">No US roles found.</p>
-              )}
-            </div>
+            {loading ? (
+              <p className="text-muted-foreground">Loading jobs...</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {usJobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+                {usJobs.length === 0 && (
+                  <p className="text-muted-foreground">No US roles found.</p>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="india" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {indiaJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-              {indiaJobs.length === 0 && (
-                <p className="text-muted-foreground">No India roles found.</p>
-              )}
-            </div>
+            {loading ? (
+              <p className="text-muted-foreground">Loading jobs...</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {indiaJobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+                {indiaJobs.length === 0 && (
+                  <p className="text-muted-foreground">No India roles found.</p>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </section>
