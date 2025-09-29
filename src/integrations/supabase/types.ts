@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      crawler_execution_log: {
+        Row: {
+          error_message: string | null
+          executed_at: string
+          execution_time_ms: number | null
+          id: string
+          jobs_found: number | null
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          jobs_found?: number | null
+          status: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          jobs_found?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       job_sources: {
         Row: {
           base_url: string
@@ -251,7 +278,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      trigger_job_crawler: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
