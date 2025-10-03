@@ -514,11 +514,15 @@ async function parseJobsFromSource(crawlData: any[], sourceName: string): Promis
     try {
       if (!page.html && !page.markdown && !page.content) {
         stats.failedRequests++;
+        console.log(`⚠️ No content found for page from ${sourceName}`);
         continue;
       }
       
       stats.successfulRequests++;
       const content = page.html || page.markdown || page.content || '';
+      
+      // Log content preview for debugging
+      console.log(`📄 Content preview from ${sourceName} (${content.length} chars):`, content.substring(0, 300));
       
       let extractedJobs: JobData[] = [];
       
@@ -534,6 +538,7 @@ async function parseJobsFromSource(crawlData: any[], sourceName: string): Promis
         extractedJobs = extractJobsFromContent(content, sourceName, page.url);
       }
       
+      console.log(`✅ Extracted ${extractedJobs.length} jobs from ${sourceName} page`);
       jobs.push(...extractedJobs);
       stats.jobsExtracted += extractedJobs.length;
       
@@ -553,19 +558,22 @@ function extractJobsFromContent(content: string, sourceName: string, sourceUrl?:
   // Enhanced job extraction patterns for Indian job portals
   const jobPatterns = {
     title: [
-      /(?:Job Title|Position|Role):\s*([^\n]+)/gi,
-      /<h[1-4][^>]*>([^<]*(?:engineer|developer|analyst|manager|executive|specialist|consultant)[^<]*)<\/h[1-4]>/gi,
-      /^#\s+([^\n]*(?:engineer|developer|analyst|manager|executive|specialist|consultant)[^\n]*)/gim,
-      /\*\*([^*]*(?:engineer|developer|analyst|manager|executive|specialist|consultant)[^*]*)\*\*/gi
+      /(?:Job Title|Position|Role|Designation):\s*([^\n]+)/gi,
+      /<h[1-6][^>]*>([^<]*(?:engineer|developer|analyst|manager|executive|specialist|consultant|designer|architect|lead|intern)[^<]{0,100})<\/h[1-6]>/gi,
+      /^#+\s+([^\n]*(?:engineer|developer|analyst|manager|executive|specialist|consultant|designer|architect|lead|intern)[^\n]{0,100})/gim,
+      /\*\*([^*]*(?:engineer|developer|analyst|manager|executive|specialist|consultant|designer|architect|lead|intern)[^*]{0,100})\*\*/gi,
+      /<[^>]*class="[^"]*title[^"]*"[^>]*>([^<]+)<\/[^>]*>/gi,
+      /\b((?:Senior|Junior|Lead|Staff|Principal)?\s*(?:Software|Full[- ]?Stack|Backend|Frontend|Mobile|Data|ML|AI|DevOps|Cloud|QA|Test)\s+(?:Engineer|Developer|Analyst|Architect|Specialist))\b/gi
     ],
     company: [
-      /(?:Company|Organization|Employer):\s*([^\n]+)/gi,
-      /at\s+([A-Z][a-zA-Z\s&.-]{2,30}(?:\s+(?:Ltd|Limited|Inc|Corp|Corporation|Pvt|Private|Technologies|Tech|Solutions|Systems|Services|Consulting|Group))?)(?:\s|$)/g,
-      /@\s*([A-Z][a-zA-Z\s&.-]{2,30})/g
+      /(?:Company|Organization|Employer|Hiring):\s*([^\n]+)/gi,
+      /(?:at|@)\s+([A-Z][a-zA-Z0-9\s&.',-]{2,50}(?:\s+(?:Ltd|Limited|Inc|Corp|Corporation|Pvt|Private|Technologies|Tech|Solutions|Systems|Services|Consulting|Group|Labs))?)(?:\s|$|\n)/g,
+      /<[^>]*class="[^"]*company[^"]*"[^>]*>([^<]+)<\/[^>]*>/gi
     ],
     location: [
-      /(?:Location|Based in|City):\s*([^\n]+)/gi,
-      /\b(Mumbai|Delhi|Bangalore|Chennai|Hyderabad|Pune|Kolkata|Ahmedabad|Gurgaon|Noida|Remote|Work from home|WFH)\b/gi
+      /(?:Location|Based in|City|Work Location):\s*([^\n]+)/gi,
+      /\b(Mumbai|Delhi|NCR|Bangalore|Bengaluru|Chennai|Hyderabad|Pune|Kolkata|Ahmedabad|Gurgaon|Gurugram|Noida|Remote|Work from home|WFH|Anywhere in India)\b/gi,
+      /<[^>]*class="[^"]*location[^"]*"[^>]*>([^<]+)<\/[^>]*>/gi
     ],
     experience: [
       /(?:Experience|Exp):\s*([^\n]+)/gi,
@@ -654,10 +662,19 @@ function extractJobsFromContent(content: string, sourceName: string, sourceUrl?:
     job.description = section.substring(0, 500); // First 500 chars as description
     job.url = sourceUrl;
     
-    // Only add job if we have at least title and company
-    if (job.title && job.company) {
+    // Add job if we have at least title (company is optional)
+    if (job.title) {
+      if (!job.company) {
+        job.company = sourceName; // Use source name as fallback company
+      }
       jobs.push(job as JobData);
+      console.log(`🔍 Found job: ${job.title} at ${job.company}`);
     }
+  }
+  
+  if (jobs.length === 0) {
+    console.log(`⚠️ No jobs extracted from content. Content length: ${content.length}, Sections: ${sections.length}`);
+  }
   }
   
   return jobs;
