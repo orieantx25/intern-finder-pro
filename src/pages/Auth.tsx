@@ -17,36 +17,43 @@ const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
 
   useEffect(() => {
+    const checkUserAndRedirect = async (userId: string) => {
+      // First check if user is admin
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      if (adminRole) {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      // If not admin, check profile completion
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('profile_completed')
+        .eq('user_id', userId)
+        .single();
+      
+      if (profile) {
+        navigate("/profile", { replace: true });
+      } else {
+        navigate("/profile-setup", { replace: true });
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Check if user has completed profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('profile_completed')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (profile) {
-          setTimeout(() => navigate("/profile", { replace: true }), 0);
-        } else {
-          setTimeout(() => navigate("/profile-setup", { replace: true }), 0);
-        }
+        setTimeout(() => checkUserAndRedirect(session.user.id), 0);
       }
     });
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('profile_completed')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (profile) {
-          navigate("/profile", { replace: true });
-        } else {
-          navigate("/profile-setup", { replace: true });
-        }
+        await checkUserAndRedirect(session.user.id);
       }
     });
 
