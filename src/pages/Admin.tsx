@@ -1,9 +1,24 @@
 import { Helmet } from "react-helmet-async";
 import Layout from "@/components/layout/Layout";
 import { CrawlerControls } from "@/components/admin/CrawlerControls";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const Admin = () => {
+  const { isLoading } = useAdminAuth();
   const canonical = `${window.location.origin}/admin`;
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-12 md:py-16 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Verifying admin access...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
