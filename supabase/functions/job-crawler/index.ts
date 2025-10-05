@@ -674,7 +674,7 @@ function extractJobsFromContent(content: string, sourceName: string, sourceUrl?:
   
   if (jobs.length === 0) {
     console.log(`⚠️ No jobs extracted from content. Content length: ${content.length}, Sections: ${sections.length}`);
-  }
+    console.log(`📝 First 1000 chars of content:`, content.substring(0, 1000));
   }
   
   return jobs;
